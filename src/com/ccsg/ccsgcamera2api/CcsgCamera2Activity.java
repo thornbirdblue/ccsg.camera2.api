@@ -20,17 +20,21 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Surface;
+import android.view.TextureView;
 
 public class CcsgCamera2Activity extends Activity {
 	private final String TAG = "CcsgCamera2";
 	private CameraManager CM;
 	private CDStateCallback CDStateCB;
 	private CameraDevice	mCameraDevice;
-	private Handler			mDeviceHandler,mSessionHandler;
+	private Handler			mDeviceHandler,mSessionHandler,mCaptureHandler;
 	private SurfaceTexture	mSurfaceTexture;
+	private TextureView		mTextureView;
 	private CSStateCallback CSStateCB;
 	private CameraCaptureSession mCameraCaptureSession;
 	private CSCaptureCallback CSCaptureCB;
+	private CaptureRequest.Builder Builder;
+	private Surface mSurface;	
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -58,9 +62,28 @@ public class CcsgCamera2Activity extends Activity {
 			e.printStackTrace();
 		}
 		
+		Log.d(TAG,"new SurfaceTexture begin!!!");
 		mSurfaceTexture = new SurfaceTexture(10);
-		CSStateCB = new CSStateCallback();
-		setContentView(R.layout.activity_ccsg_camera2);
+		Log.d(TAG,"new SurfaceTexture end!!!");
+		
+		CSStateCB = new CSStateCallback();	
+
+		CSCaptureCB = new CSCaptureCallback();
+		
+		Log.d(TAG,"new TextureView begin!!!");
+		mTextureView = new TextureView(this);
+		Log.d(TAG,"new TextureView end!!!");
+		
+		mTextureView.setSurfaceTexture(mSurfaceTexture);
+		
+		mCaptureHandler = new Handler(){
+			public void handleMessage(android.os.Message msg)
+			{
+				Log.d(TAG,"mCaptureHandler handleMessage");
+			}
+		};
+		
+		setContentView(mTextureView);
 	}
 	
 	public class CDStateCallback extends CameraDevice.StateCallback{
@@ -68,12 +91,12 @@ public class CcsgCamera2Activity extends Activity {
 		{
 			Log.d(TAG,"onOpened");
 			mCameraDevice = camera;
-			Log.d(TAG,"new Surface begin!!!");
-			Surface surface = new Surface(mSurfaceTexture);
-			Log.d(TAG,"new Surface end!!!");
+			Log.d(TAG,"new mSurface begin!!!");
+			mSurface = new Surface(mSurfaceTexture);
+			Log.d(TAG,"new mSurface end!!!");
 			try {
 				Log.d(TAG,"createCaptureSession begin!!!");
-				mCameraDevice.createCaptureSession(Arrays.asList(surface),CSStateCB,mSessionHandler);
+				mCameraDevice.createCaptureSession(Arrays.asList(mSurface),CSStateCB,mSessionHandler);
 				Log.d(TAG,"createCaptureSession end!!!");
 			} catch (CameraAccessException e) {
 				// TODO Auto-generated catch block
@@ -98,12 +121,19 @@ public class CcsgCamera2Activity extends Activity {
 		public void onConfigured(CameraCaptureSession session)
 		{			
 			Log.d(TAG,"onConfigured");
-			mCameraCaptureSession = session;
-			
-			CaptureRequest.Builder builder;
+			mCameraCaptureSession = session;				
 			
 			try {
-				builder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+				Builder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+			} catch (CameraAccessException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		
+			Builder.addTarget(mSurface);
+			
+			try {
+				mCameraCaptureSession.setRepeatingRequest(Builder.build(),CSCaptureCB,mCaptureHandler);
 			} catch (CameraAccessException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
