@@ -74,6 +74,8 @@ public class CcsgCamera2Activity extends Activity {
 		mTextureView = new TextureView(this);
 		Log.d(TAG,"new TextureView end!!!");
 		
+		mSurfaceTexture.detachFromGLContext();
+		
 		mTextureView.setSurfaceTexture(mSurfaceTexture);
 		
 		mCaptureHandler = new Handler(){
